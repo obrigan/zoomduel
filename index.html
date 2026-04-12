@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoZoom Duel</title>
+    <title>GeoZoom Duel: World Edition</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -55,7 +55,8 @@
         </div>
 
         <div id="host-controls" style="display: none;">
-            <p>Игрок <span id="answering-player-name" style="color:#f1c40f;">...</span> дает ответ.</p>
+            <p style="color: #2ecc71; font-size: 26px; font-weight: bold; margin-bottom: 5px;">Ответ: <span id="correct-answer-host" style="text-transform: uppercase;">...</span></p>
+            <p style="margin-bottom: 15px;">Игрок <span id="answering-player-name" style="color:#f1c40f; font-weight: bold;">...</span> дает ответ.</p>
             <div style="display: flex; gap: 20px;">
                 <button class="judge-btn correct-btn" onclick="judgeAnswer(true)">ВЕРНО (+100)</button>
                 <button class="judge-btn wrong-btn" onclick="judgeAnswer(false)">НЕВЕРНО (-100)</button>
