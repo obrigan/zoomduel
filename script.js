@@ -5,7 +5,6 @@ const allLocations = [
     { lat: 19.4326, lng: -99.1332, name: "Мексика", iso: "MEX" },
     { lat: 38.9072, lng: -77.0369, name: "США", iso: "USA" },
     { lat: 14.6349, lng: -90.5069, name: "Гватемала", iso: "GTM" },
-    { lat: 14.0818, lng: -87.2068, name: "Гондурас", iso: "HND" },
     { lat: 12.1150, lng: -86.2362, name: "Никарагуа", iso: "NIC" },
     { lat: 9.9281, lng: -84.0907, name: "Коста-Рика", iso: "CRI" },
     { lat: 8.9824, lng: -79.5199, name: "Панама", iso: "PAN" },
