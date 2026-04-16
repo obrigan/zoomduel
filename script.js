@@ -3,18 +3,12 @@ const allLocations = [
     { lat: 19.4326, lng: -99.1332, name: "Мексика", iso: "MEX" },
     { lat: 38.9072, lng: -77.0369, name: "США", iso: "USA" },
     { lat: 14.6349, lng: -90.5069, name: "Гватемала", iso: "GTM" },
-    { lat: 14.0818, lng: -87.2068, name: "Гондурас", iso: "HND" },
     { lat: 12.1150, lng: -86.2362, name: "Никарагуа", iso: "NIC" },
     { lat: 9.9281, lng: -84.0907, name: "Коста-Рика", iso: "CRI" },
     { lat: 8.9824, lng: -79.5199, name: "Панама", iso: "PAN" },
-    { lat: 18.5001, lng: -69.9885, name: "Доминикана", iso: "DOM" },
-    { lat: 23.1136, lng: -82.3666, name: "Куба", iso: "CUB" },
     { lat: -34.6037, lng: -58.3816, name: "Аргентина", iso: "ARG" },
-    { lat: -16.4897, lng: -68.1193, name: "Боливия", iso: "BOL" },
-    { lat: -15.7975, lng: -47.8919, name: "Бразилия", iso: "BRA" },
+    { lat: -23.5505, lng: -46.6333, name: "Бразилия", iso: "BRA" },
     { lat: -33.4489, lng: -70.6693, name: "Чили", iso: "CHL" },
-    { lat: 4.7110, lng: -74.0721, name: "Колумбия", iso: "COL" },
-    { lat: -12.0464, lng: -77.0428, name: "Перу", iso: "PER" },
     { lat: 52.5200, lng: 13.4050, name: "Германия", iso: "DEU" },
     { lat: 48.8566, lng: 2.3522, name: "Франция", iso: "FRA" },
     { lat: 41.9028, lng: 12.4964, name: "Италия", iso: "ITA" },
@@ -38,7 +32,6 @@ let myPlayerIndex = -1;
 let map, currentRound = 0, scores = [0, 0], playerNames = ["Ожидание...", "Ожидание..."], zoomInterval = null, currentZoom = 18;
 let worldGeoJSON = null, countryBorderLayer = null, bordersLoaded = false;
 
-// Загрузка границ
 fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json')
     .then(res => res.json())
     .then(data => { worldGeoJSON = data; bordersLoaded = true; if (isHost) document.getElementById('lobby-status').innerText = "Ожидание игроков (0/2)..."; });
