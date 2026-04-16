@@ -3,12 +3,18 @@ const allLocations = [
     { lat: 19.4326, lng: -99.1332, name: "Мексика", iso: "MEX" },
     { lat: 38.9072, lng: -77.0369, name: "США", iso: "USA" },
     { lat: 14.6349, lng: -90.5069, name: "Гватемала", iso: "GTM" },
+    { lat: 14.0818, lng: -87.2068, name: "Гондурас", iso: "HND" },
     { lat: 12.1150, lng: -86.2362, name: "Никарагуа", iso: "NIC" },
     { lat: 9.9281, lng: -84.0907, name: "Коста-Рика", iso: "CRI" },
     { lat: 8.9824, lng: -79.5199, name: "Панама", iso: "PAN" },
+    { lat: 18.5001, lng: -69.9885, name: "Доминикана", iso: "DOM" },
+    { lat: 23.1136, lng: -82.3666, name: "Куба", iso: "CUB" },
     { lat: -34.6037, lng: -58.3816, name: "Аргентина", iso: "ARG" },
-    { lat: -23.5505, lng: -46.6333, name: "Бразилия", iso: "BRA" },
+    { lat: -16.4897, lng: -68.1193, name: "Боливия", iso: "BOL" },
+    { lat: -15.7975, lng: -47.8919, name: "Бразилия", iso: "BRA" },
     { lat: -33.4489, lng: -70.6693, name: "Чили", iso: "CHL" },
+    { lat: 4.7110, lng: -74.0721, name: "Колумбия", iso: "COL" },
+    { lat: -12.0464, lng: -77.0428, name: "Перу", iso: "PER" },
     { lat: 52.5200, lng: 13.4050, name: "Германия", iso: "DEU" },
     { lat: 48.8566, lng: 2.3522, name: "Франция", iso: "FRA" },
     { lat: 41.9028, lng: 12.4964, name: "Италия", iso: "ITA" },
@@ -27,17 +33,22 @@ let worldGeoJSON = null, countryBorderLayer = null, bordersLoaded = false;
 const urlParams = new URLSearchParams(window.location.search);
 let hostIdFromUrl = urlParams.get('host');
 
-// Настройки PeerJS для обхода блокировок
-const peerConfig = {
-    debug: 2,
-    config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] }
-};
+// КОНФИГУРАЦИЯ PEER
+const peer = new Peer({
+    config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] },
+    debug: 1
+});
 
-let peer = new Peer(peerConfig);
 let isHost = !hostIdFromUrl;
 let players = [], myConn = null, myPlayerIndex = -1, map;
 
 window.onload = () => {
+    // Сразу блокируем кнопку присоединения, пока сеть не готова
+    if (!isHost) {
+        document.getElementById('btn-join').disabled = true;
+        document.getElementById('btn-join').innerText = "ПОДКЛЮЧЕНИЕ К СЕТИ...";
+    }
+    
     if (isHost) {
         document.getElementById('host-panel').style.display = 'block';
         document.getElementById('guest-panel').style.display = 'none';
@@ -49,6 +60,7 @@ window.onload = () => {
     }
 };
 
+// ЗАГРУЗКА ГРАНИЦ
 fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json')
     .then(res => res.json())
     .then(data => { 
@@ -57,8 +69,9 @@ fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.jso
         if (isHost) document.getElementById('lobby-status').innerText = "Ожидание игроков (0/2)..."; 
     });
 
+// СЕТЕВЫЕ СОБЫТИЯ
 peer.on('open', (id) => {
-    console.log("PeerID:", id);
+    console.log("Мой Peer ID:", id);
     if (isHost) {
         const url = window.location.origin + window.location.pathname + '?host=' + id;
         document.getElementById('game-url-box').innerText = url;
@@ -66,20 +79,39 @@ peer.on('open', (id) => {
             navigator.clipboard.writeText(url);
             document.getElementById('btn-copy').innerText = "ССЫЛКА В БУФЕРЕ!";
         };
+    } else {
+        // Теперь сеть готова, можно жать кнопку
+        document.getElementById('btn-join').disabled = false;
+        document.getElementById('btn-join').innerText = "ПРИСОЕДИНИТЬСЯ";
     }
+    startHeartbeat();
 });
 
-// Если вылетает та самая ошибка — пробуем переподключиться
+// ОБРАБОТКА ОШИБОК И ПЕРЕПОДКЛЮЧЕНИЯ
+peer.on('disconnected', () => {
+    console.log("Соединение разорвано. Переподключение...");
+    peer.reconnect();
+});
+
 peer.on('error', (err) => {
     console.error("PeerJS Error:", err.type);
-    if (err.type === 'server-error' || err.type === 'socket-closed') {
-        console.log("Попытка восстановить соединение...");
-        peer.reconnect();
-    } else {
-        alert("Ошибка сети: " + err.type + ". Попробуйте выключить VPN или сменить браузер.");
+    if (err.type === 'peer-unavailable') {
+        alert("Хост не найден. Возможно, ведущий закрыл страницу или ссылка неверна.");
+    } else if (err.type === 'server-error' || err.type === 'socket-error') {
+        console.log("Ошибка сервера, пробуем восстановить...");
     }
 });
 
+// ТИКЕР "ПУЛЬСА" ЧТОБЫ СЕТЬ НЕ ЗАСЫПАЛА
+function startHeartbeat() {
+    setInterval(() => {
+        if (peer.open) {
+            peer.socket.send({ type: 'HEARTBEAT' });
+        }
+    }, 15000);
+}
+
+// ЛОГИКА ХОСТА
 if (isHost) {
     peer.on('connection', (conn) => {
         const pIdx = players.length;
@@ -117,6 +149,11 @@ window.joinGame = function() {
     });
 
     myConn.on('data', setupPlayerListeners);
+    
+    myConn.on('close', () => {
+        alert("Связь с ведущим потеряна!");
+        location.reload();
+    });
 };
 
 window.startRoundAsHost = function() {
@@ -207,7 +244,7 @@ function setupPlayerListeners(d) {
     if (d.type === 'round_end') if(countryBorderLayer) countryBorderLayer.setStyle({ opacity: 1, fillOpacity: 0.25 });
 }
 
-window.sendBuzz = function() { if(myConn) myConn.send({ type: 'buzz' }); };
+window.sendBuzz = function() { if(myConn && myConn.open) myConn.send({ type: 'buzz' }); };
 
 function updateBorder(iso, zoom) {
     if (!worldGeoJSON || !bordersLoaded) return;
@@ -226,5 +263,7 @@ function updateBorder(iso, zoom) {
 
 function initMap() {
     map = L.map('map', { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false });
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri'
+    }).addTo(map);
 }
