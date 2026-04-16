@@ -3,6 +3,7 @@ const allLocations = [
     { lat: 19.4326, lng: -99.1332, name: "Мексика", iso: "MEX" },
     { lat: 38.9072, lng: -77.0369, name: "США", iso: "USA" },
     { lat: 14.6349, lng: -90.5069, name: "Гватемала", iso: "GTM" },
+    { lat: 14.0818, lng: -87.2068, name: "Гондурас", iso: "HND" },
     { lat: 12.1150, lng: -86.2362, name: "Никарагуа", iso: "NIC" },
     { lat: 9.9281, lng: -84.0907, name: "Коста-Рика", iso: "CRI" },
     { lat: 8.9824, lng: -79.5199, name: "Панама", iso: "PAN" },
@@ -32,20 +33,32 @@ let myPlayerIndex = -1;
 let map, currentRound = 0, scores = [0, 0], playerNames = ["Ожидание...", "Ожидание..."], zoomInterval = null, currentZoom = 18;
 let worldGeoJSON = null, countryBorderLayer = null, bordersLoaded = false;
 
+// Скрываем панели, которые не нужны в данной роли
+document.addEventListener('DOMContentLoaded', () => {
+    if (isHost) {
+        document.getElementById('guest-panel').style.display = 'none';
+        document.getElementById('setup-role-text').innerText = "ТЫ - ВЕДУЩИЙ (СУДЬЯ)";
+    } else {
+        document.getElementById('host-panel').style.display = 'none';
+        document.getElementById('setup-role-text').innerText = "ТЫ - ИГРОК";
+    }
+});
+
+// Загрузка GeoJSON
 fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json')
     .then(res => res.json())
-    .then(data => { worldGeoJSON = data; bordersLoaded = true; if (isHost) document.getElementById('lobby-status').innerText = "Ожидание игроков (0/2)..."; });
+    .then(data => { 
+        worldGeoJSON = data; 
+        bordersLoaded = true; 
+        if (isHost) document.getElementById('lobby-status').innerText = "Ожидание игроков (0/2)..."; 
+    });
 
 peer.on('open', (id) => {
-    document.getElementById('setup-role-text').innerText = isHost ? "ТЫ - ВЕДУЩИЙ (СУДЬЯ)" : "ТЫ - ИГРОК";
     if (isHost) {
-        document.getElementById('host-panel').style.display = 'block';
-        document.getElementById('nick-input').style.display = 'none'; 
         document.getElementById('game-url-box').innerText = window.location.origin + window.location.pathname + '?host=' + id;
         document.getElementById('btn-copy').onclick = () => { navigator.clipboard.writeText(document.getElementById('game-url-box').innerText); document.getElementById('btn-copy').innerText = "ССЫЛКА В БУФЕРЕ!"; };
         document.getElementById('btn-start').onclick = startRoundAsHost;
     } else {
-        document.getElementById('guest-panel').style.display = 'block';
         document.getElementById('btn-join').onclick = () => {
             const nick = document.getElementById('nick-input').value || "Аноним";
             document.getElementById('setup-overlay').style.display = 'none';
@@ -65,9 +78,10 @@ if (isHost) {
         conn.on('data', (data) => {
             if (data.type === 'join') {
                 playerNames[pIdx] = data.name;
+                if (players.length === 1) document.getElementById('lobby-status').innerText = "Один игрок зашел. Ждем второго...";
                 if (players.length === 2) {
                     document.getElementById('btn-start').disabled = !bordersLoaded;
-                    document.getElementById('lobby-status').innerText = "Все готовы!";
+                    document.getElementById('lobby-status').innerText = bordersLoaded ? "Все готовы!" : "Ждем загрузку границ...";
                     document.getElementById('name-p1').innerText = playerNames[0];
                     document.getElementById('name-p2').innerText = playerNames[1];
                     broadcast({ type: 'names', names: playerNames });
@@ -164,9 +178,15 @@ function setupPlayerConnection(conn, nick) {
             document.getElementById('status-text').innerText = `Раунд ${d.roundNum} из ${ROUNDS_TOTAL}`;
         }
         if (d.type === 'zoom') { map.setZoom(d.zoom); updateBorder(d.iso, d.zoom); }
-        if (d.type === 'buzzed') { document.getElementById('btn-buzz').disabled = true; document.getElementById('map-overlay').style.display = 'flex'; }
+        if (d.type === 'buzzed') {
+            document.getElementById('btn-buzz').disabled = true;
+            document.getElementById('map-overlay').style.display = 'flex';
+        }
         if (d.type === 'resume') { document.getElementById('map-overlay').style.display = 'none'; document.getElementById('btn-buzz').disabled = false; }
-        if (d.type === 'scores') { document.getElementById('score-p1').innerText = d.scores[0]; document.getElementById('score-p2').innerText = d.scores[1]; }
+        if (d.type === 'scores') {
+            document.getElementById('score-p1').innerText = d.scores[0];
+            document.getElementById('score-p2').innerText = d.scores[1];
+        }
         if (d.type === 'round_end') if(countryBorderLayer) countryBorderLayer.setStyle({ opacity: 1, fillOpacity: 0.25 });
     });
 }
